@@ -16,7 +16,7 @@ EPISODES = 1000  # Maximum number of episodes
 class DQNAgent:
     # Constructor for the agent (invoked when DQN is first called in main)
     def __init__(self, state_size, action_size):
-        self.check_solve = False  # If True, stop if you satisfy solution condition
+        self.check_solve = True  # If True, stop if you satisfy solution condition
         self.render = False        # If you want to see Cartpole learning, then change to True
 
         # Get size of state and action
@@ -59,6 +59,8 @@ class DQNAgent:
         model = Sequential()
         model.add(Dense(16, input_dim=self.state_size, activation='relu',
                         kernel_initializer='he_uniform'))
+        model.add(Dense(16, input_dim=self.state_size, activation='relu',
+                        kernel_initializer='he_uniform'))
         model.add(Dense(self.action_size, activation='linear',
                         kernel_initializer='he_uniform'))
         model.summary()
@@ -83,11 +85,9 @@ class DQNAgent:
         # revise_start
         state_actions = self.model.predict(state) # All actions in this state
         if (np.random.uniform() > self.epsilon) or (state_actions.all() == 0):  # non-greedy or when this state has not been discovered
-
-            action = random.randrange(self.action_size)
+            action = state_actions.argmax()  # greedy
         else:
-            action = state_actions.argmax()    # greedy
-
+            action = random.randrange(self.action_size)
         # revise_end
         return action
 ###############################################################################
@@ -129,7 +129,10 @@ class DQNAgent:
 
         # revise_start
         for i in range(self.batch_size):
-            target[i][action[i]] = reward[i] +self.learning_rate * np.max(target_val[i])
+            if done[i]:
+                target[i][action[i]] = reward[i]
+            else:
+                target[i][action[i]] = reward[i] + self.discount_factor * np.max(target_val[i])
         # revise_end
 ###############################################################################
 ###############################################################################
@@ -230,3 +233,4 @@ if __name__ == "__main__":
                         agent.plot_data(episodes, scores, max_q_mean[:e+1])
                         sys.exit()
     agent.plot_data(episodes, scores, max_q_mean)
+    print(np.mean(scores[-min(100, len(scores)):]))
